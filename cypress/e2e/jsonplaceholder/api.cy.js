@@ -1,10 +1,7 @@
-const jsonAssertion = require("soft-assert") // softAssertion didn't help me
-
 
 describe('JSON place holder', () => {
-    const amountOfTry = 120, greater = 300
 
-    // task #1
+    // DONE TASK #1
     it('GET json and check that it is an object', () => {
         cy.request(`https://jsonplaceholder.typicode.com/posts`)
             .its('body').then((response) => {
@@ -14,77 +11,92 @@ describe('JSON place holder', () => {
                 }
         })
     })
+    // DONE TASK #2
+    it('GET json and check that it is an body field is string and greater then some value', async (done) => {
+        const amountOfTry = 120, greater = 160;
+        let errors = [];
+        let cycleDone = false
 
-    // task #2
-        // I don't know if anyone does this, but this is the only option that works)
-    for(let i = 1; i < amountOfTry; i++){
-        it(`GET json and check that it is an object (try number ${i})`, () => {
-            cy.request(`https://jsonplaceholder.typicode.com/posts/${i}`)
-                .its('body').then((response) => {
-                expect(typeof response.body).to.eq('string')
-                expect(response.body.length).to.greaterThan(greater)
+        // Generate array with indexes from 1 to amountOfTry
+        const indexes = Array.from({ length: amountOfTry }, (_, i) => i + 1);
+
+        // Send requests for each index and check response
+        const requests = indexes.map((index) => {
+            return cy.request({
+                url: `https://jsonplaceholder.typicode.com/posts/${index}`,
+                failOnStatusCode: false
             })
-        })
-    }
-
-    // cy.on('fail') doesn't work ...
-    // I mean - cy.on('fail', (error, runnable) => {
-    //   console.error('Failed:', error.message)
-    //   console.error(error.stack)
-    //
-    //
-    //
-    //   throw error
-    // })
-
-    /*
-    // catch() not working, actually // TASK #2 !!!!!!
-
-    it('GET json and check that it is an object ', async () => {
-        let amountOfFailedTests = 0;
-        for (let i = 1; i < amountOfTry; i++) {
-            cy.wrap(i).then((index) => {
-                cy.request(`https://jsonplaceholder.typicode.com/posts/${index}`)
-                    .its('body').then((response) => {
-                    expect(typeof response.body).to.eq('string')
-                    expect(response.body.length).to.greaterThan(greater)
-                }).catch((error) => {   // chainable
-                    amountOfFailedTests++;
-                    console.log(error)
-                })
-            })
-        }
-    });
-    */
-
-    /*
-
-    // here if /posts/102+ then there will be a fail on the first error
-    it('GET json and check that it is an object', () => {
-        let amountOfFailedTests = 0;
-        for (let i = 1; i < amountOfTry; i++) {
-            cy.request(`https://jsonplaceholder.typicode.com/posts/${i}`)
-                .its('body')
                 .then((response) => {
+                    if (response.status !== 200) {
+                        errors.push(`Request for index ${index} failed with status ${response.status}`);
+                    } else {
+
+                        if (typeof response.body.body !== 'string') {
+                            errors.push(`Request for index ${index}, Resp body is not a string. Actual type: ${typeof response}`);
+                        }
+
+                        if (response.body.body.length <= greater) {
+                            errors.push(`Request for index ${index}, Resp body length is not greater than ${greater}. Actual length: ${response.body.body.length}`);
+                        }
+                    }
+                    if (index === amountOfTry) cycleDone = true
+                    while (cycleDone) {
+                        if (errors.length > 0) {
+                            const errorMessage = `Some tests failed: ${errors.join('\n')}`;
+                            throw new Error(errorMessage);
+                        }
+                        cycleDone = false
+                    }
+                });
+        });
+
+/*
+        // Wait for all requests to finish and then check for failed tests
+        return await Promise.all(requests).then(() => {
+
+            if (errors.length > 0) {
+                const errorMessage = `Some requests failed: ${errors.join('\n')}`;
+                throw new Error(errorMessage);
+            }
+        }); */
+    });
+
+
+
+/*
+    it('GET json and check that it is an object', async () => {
+        let amountOfFailedTests = 0;
+        const promises = [];
+
+        for (let i = 1; i < amountOfTry; i++) {
+            promises.push(
+                cy.request({
+                    url: `https://jsonplaceholder.typicode.com/posts/${i}`,
+                    failOnStatusCode: false
+                }).then((response) => {
                     let errors = [];
 
-                    if (typeof response.body !== 'string') {
+                    if (typeof response.body.body !== 'string') {
                         errors.push(`Response body is not a string. Actual type: ${typeof response}`);
                     }
 
-                    if (response.body.length <= greater) {
-                        errors.push(`Response body length is not greater than ${greater}. Actual length: ${response.length}`);
+                    if (response.body.body.length <= greater) {
+                        errors.push(`Response body length is not greater than ${greater}. Actual length: ${response.body.body.length}`);
                     }
 
                     if (errors.length > 0) {
                         amountOfFailedTests++;
-                        console.log(errors.join('\n'));
+                        cy.log(errors.join('\n'));
                     }
-                });
+                })
+            );
         }
+
+        const result = await Promise.all(promises);
 
         expect(amountOfFailedTests).to.equal(0, 'Some requests failed');
     });
 
-     */
+*/
+
 })
